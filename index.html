@@ -1,164 +1,80 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>JumpRunt</title>
+<title>RunBun Style Code Runner</title>
 <style>
-body { margin:0; background:#111; display:flex; justify-content:center; align-items:center; height:100vh; font-family:sans-serif; }
-canvas { border:3px solid white; background:#222; }
+body{
+  margin:0;
+  font-family:monospace;
+  background:#0f172a;
+  color:white;
+  display:flex;
+  height:100vh;
+}
+#editor{
+  width:50%;
+  height:100%;
+  border:none;
+  outline:none;
+  padding:20px;
+  background:#020617;
+  color:#e2e8f0;
+  font-size:14px;
+  resize:none;
+}
+#right{
+  width:50%;
+  display:flex;
+  flex-direction:column;
+}
+#run{
+  background:#22c55e;
+  border:none;
+  padding:12px;
+  font-size:16px;
+  cursor:pointer;
+}
+#output{
+  flex:1;
+  background:#020617;
+  padding:20px;
+  overflow:auto;
+  white-space:pre-wrap;
+}
 </style>
 </head>
 <body>
-<canvas id="game" width="300" height="400"></canvas>
+
+<textarea id="editor">
+// Write JavaScript here
+console.log("Hello World");
+</textarea>
+
+<div id="right">
+<button id="run">Run</button>
+<div id="output"></div>
+</div>
+
 <script>
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
-const WIDTH = canvas.width;
-const HEIGHT = canvas.height;
+const editor = document.getElementById("editor");
+const output = document.getElementById("output");
+const run = document.getElementById("run");
 
-// Game variables
-let score = 0;
-let clicks = [];
-let lavaHeight = HEIGHT;
-
-// Player
-let player = {
-  x: WIDTH/2-10,
-  y: HEIGHT-80,
-  vx:0,
-  vy:0,
-  size:20,
-  dir:1,
-  hopFrame:0,
-  hopTimer:0
-};
-
-// Platforms
-let platforms = [];
-function spawnPlatform(y){
-  let side = Math.random()<0.5 ? 20 : WIDTH-60;
-  let gap = 40 + Math.random()*30;
-  platforms.push({x:side, y:y, w:40, h:8, falling:false, fallSpeed:0});
-}
-for(let i=0;i<8;i++) spawnPlatform(HEIGHT - i*60);
-
-// Controls
-function jumpSide(dir){
-  if(player.vy>-1) return;
-  player.vx = dir*4;
-  player.vy = -10;
-  player.dir = dir;
-  clicks.push(Date.now());
-}
-document.addEventListener("keydown", e=>{
-  if(e.key=="ArrowLeft"||e.key=="a") jumpSide(-1);
-  if(e.key=="ArrowRight"||e.key=="d") jumpSide(1);
-});
-canvas.addEventListener("mousedown", e=>{
-  let rect = canvas.getBoundingClientRect();
-  let x = e.clientX - rect.left;
-  if(x<WIDTH/2) jumpSide(-1);
-  else jumpSide(1);
-});
-
-// Biomes
-function biomeSpeed(){
-  if(score<50) return 0.5;
-  if(score<100) return 0.8;
-  if(score<150) return 1.2;
-  return 1.6;
-}
-function biomeColor(){
-  if(score<50) return "#5a4634";
-  if(score<100) return "#444";
-  if(score<150) return "#2e6f3e";
-  return "#aee1ff";
-}
-
-// Update
-function update(){
-  // Physics
-  player.vy += 0.45;
-  player.y += player.vy;
-  player.x += player.vx;
-  player.vx *= 0.88;
-
-  if(player.x<0){player.x=0; player.vx=0; player.vy*=0.5;}
-  if(player.x+player.size>WIDTH){player.x=WIDTH-player.size; player.vx=0; player.vy*=0.5;}
-
-  // Platforms
-  platforms.forEach(p=>{
-    p.y += biomeSpeed();
-    if(!p.falling && player.vy>0 && player.x+player.size>p.x && player.x<p.x+p.w &&
-       player.y+player.size>p.y && player.y+player.size<p.y+12){
-      player.vy=-10;
-      score++;
-      p.falling = true;
-      p.fallSpeed = biomeSpeed()*3;
-    }
-    if(p.falling) p.y -= p.fallSpeed;
-  });
-
-  platforms = platforms.filter(p=>p.y<HEIGHT+20);
-  while(platforms.length<8) spawnPlatform(-20);
-
-  // Lava
-  lavaHeight -= 0.03;
-  if(player.y+player.size>lavaHeight){alert("Game Over! Score:"+score); location.reload();}
-
-  // Bunny hop animation
-  player.hopTimer++;
-  if(player.hopTimer>6){player.hopFrame=(player.hopFrame+1)%2; player.hopTimer=0;}
-}
-
-// Draw bunny
-function drawBunny(){
-  ctx.save();
-  ctx.translate(player.x+player.size/2, player.y+player.size/2);
-  ctx.scale(player.dir,1);
-  ctx.fillStyle="white";
-  ctx.beginPath();
-  ctx.ellipse(0,0,player.size/2,player.size/2,0,0,Math.PI*2);
-  ctx.fill();
-  // Ears
-  ctx.fillRect(-5, -player.size/1.5, 4, player.size/2);
-  ctx.fillRect(1, -player.size/1.5, 4, player.size/2);
-  // Legs hopping
-  if(player.hopFrame===1){
-    ctx.fillRect(-7, player.size/4,4,6);
-    ctx.fillRect(3, player.size/4,4,6);
+run.onclick = () => {
+  output.textContent = "";
+  const log = console.log;
+  console.log = (...args)=>{
+    output.textContent += args.join(" ") + "\n";
+  };
+  try{
+    eval(editor.value);
+  }catch(err){
+    output.textContent += err;
   }
-  ctx.restore();
-}
-
-// Draw everything
-function draw(){
-  ctx.clearRect(0,0,WIDTH,HEIGHT);
-  ctx.fillStyle=biomeColor();
-  ctx.fillRect(0,0,WIDTH,HEIGHT);
-
-  platforms.forEach(p=>{
-    ctx.fillStyle="#ddd";
-    ctx.fillRect(p.x,p.y,p.w,p.h);
-  });
-
-  ctx.fillStyle="red";
-  ctx.fillRect(0,lavaHeight,WIDTH,HEIGHT-lavaHeight);
-
-  drawBunny();
-
-  ctx.fillStyle="white";
-  ctx.font="14px sans-serif";
-  ctx.fillText("Score:"+score,10,20);
-
-  // CPS
-  let now = Date.now();
-  clicks = clicks.filter(t=>now-t<1000);
-  ctx.fillText("Cps:"+clicks.length, WIDTH-60,20);
-}
-
-function loop(){update(); draw(); requestAnimationFrame(loop);}
-loop();
+  console.log = log;
+};
 </script>
+
 </body>
 </html>
