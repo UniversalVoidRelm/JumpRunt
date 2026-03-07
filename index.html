@@ -2,49 +2,86 @@
 <html>
 <head>
 <title>JumpRunt</title>
+
 <style>
 body{
 margin:0;
+background:#87CEEB;
 display:flex;
 justify-content:center;
 align-items:center;
 height:100vh;
-background:#87ceeb;
+font-family:Arial;
 }
 
 canvas{
-border:3px solid black;
-background:#aee3ff;
+border:4px solid black;
+background:white;
+}
+
+#score{
+position:absolute;
+right:20px;
+top:20px;
+font-size:18px;
+}
+
+#cps{
+position:absolute;
+left:20px;
+top:20px;
+font-size:18px;
 }
 </style>
-</head>
 
+</head>
 <body>
 
-<canvas id="game" width="320" height="480"></canvas>
+<div id="score">Score: 0</div>
+<div id="cps">CPS: 0</div>
+
+<canvas id="game" width="260" height="420"></canvas>
 
 <script>
 
 const canvas = document.getElementById("game")
 const ctx = canvas.getContext("2d")
 
-let bunny = {x:160,y:400,vx:0,vy:0,size:15}
-let gravity = 0.5
-let jump = -9
+let score = 0
+let clicks = []
+let cps = 0
+
+let gravity = 0.6
+let jumpPower = -11
+
+let bunny = {
+x:130,
+y:350,
+vx:0,
+vy:0,
+size:12
+}
 
 let platforms = []
 
 function newPlatform(y){
 platforms.push({
-x:Math.random()*240+20,
+x:Math.random()*200+20,
 y:y,
-w:60,
-h:10
+w:40,
+h:8
 })
 }
 
-for(let i=0;i<10;i++){
-newPlatform(480-i*50)
+for(let i=0;i<12;i++){
+newPlatform(420-i*35)
+}
+
+function biomeSpeed(){
+if(score<50) return 0.2
+if(score<100) return 0.4
+if(score<150) return 0.6
+return 0.8
 }
 
 function update(){
@@ -52,34 +89,38 @@ function update(){
 bunny.vy += gravity
 bunny.y += bunny.vy
 
-for(let p of platforms){
+platforms.forEach(p=>{
+
+p.y += biomeSpeed()
 
 if(
 bunny.vy>0 &&
 bunny.x>p.x &&
 bunny.x<p.x+p.w &&
 bunny.y+bunny.size>p.y &&
-bunny.y+bunny.size<p.y+15
+bunny.y+bunny.size<p.y+12
 ){
-bunny.vy=jump
+bunny.vy = jumpPower
+score++
+document.getElementById("score").innerText="Score: "+score
 }
 
-}
+})
 
-if(bunny.y<200){
+if(bunny.y<180){
 
-let diff=200-bunny.y
-bunny.y=200
+let diff=180-bunny.y
+bunny.y=180
 
-for(let p of platforms){
+platforms.forEach(p=>{
 p.y+=diff
-}
+})
 
 }
 
-platforms=platforms.filter(p=>p.y<500)
+platforms=platforms.filter(p=>p.y<430)
 
-while(platforms.length<10){
+while(platforms.length<12){
 newPlatform(Math.random()*-40)
 }
 
@@ -87,17 +128,21 @@ newPlatform(Math.random()*-40)
 
 function draw(){
 
-ctx.clearRect(0,0,320,480)
+ctx.clearRect(0,0,260,420)
 
-for(let p of platforms){
-ctx.fillStyle="green"
+platforms.forEach(p=>{
+ctx.fillStyle="#3cb043"
 ctx.fillRect(p.x,p.y,p.w,p.h)
-}
+})
 
 ctx.fillStyle="white"
 ctx.beginPath()
 ctx.arc(bunny.x,bunny.y,bunny.size,0,Math.PI*2)
 ctx.fill()
+
+ctx.fillStyle="black"
+ctx.fillRect(bunny.x-4,bunny.y-16,3,10)
+ctx.fillRect(bunny.x+1,bunny.y-16,3,10)
 
 }
 
@@ -109,28 +154,61 @@ requestAnimationFrame(loop)
 
 loop()
 
+function registerClick(){
+
+let now=Date.now()
+clicks.push(now)
+
+clicks=clicks.filter(t=>now-t<1000)
+
+cps=clicks.length
+document.getElementById("cps").innerText="CPS: "+cps
+
+}
+
 function left(){
-bunny.vx=-4
-bunny.vy=jump
+
+registerClick()
+
+if(bunny.x<20){
+bunny.vy=5
+return
+}
+
+bunny.vx=-5
+bunny.vy=jumpPower
 bunny.x+=bunny.vx
+
 }
 
 function right(){
-bunny.vx=4
-bunny.vy=jump
+
+registerClick()
+
+if(bunny.x>240){
+bunny.vy=5
+return
+}
+
+bunny.vx=5
+bunny.vy=jumpPower
 bunny.x+=bunny.vx
+
 }
 
 document.addEventListener("keydown",e=>{
-if(e.key==="ArrowLeft"||e.key==="a")left()
-if(e.key==="ArrowRight"||e.key==="d")right()
+if(e.key==="ArrowLeft"||e.key==="a") left()
+if(e.key==="ArrowRight"||e.key==="d") right()
 })
 
 canvas.addEventListener("click",e=>{
-let r=canvas.getBoundingClientRect()
-let x=e.clientX-r.left
-if(x<160)left()
+
+let rect=canvas.getBoundingClientRect()
+let x=e.clientX-rect.left
+
+if(x<130) left()
 else right()
+
 })
 
 </script>
