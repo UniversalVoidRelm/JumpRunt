@@ -17,25 +17,24 @@ font-family:Arial;
 
 canvas{
 border:4px solid #222;
-background:#1a1a1a;
+background:#181818;
 }
 
 #score{
 position:absolute;
-top:20px;
+top:15px;
 left:50%;
 transform:translateX(-50%);
-color:#ffd84a;
 font-size:28px;
 font-weight:bold;
+color:#ffd84a;
 }
 
 #cps{
 position:absolute;
-top:20px;
+top:15px;
 right:20px;
 color:white;
-font-size:14px;
 }
 </style>
 </head>
@@ -43,7 +42,7 @@ font-size:14px;
 <body>
 
 <div id="score">0</div>
-<div id="cps">CPS: 0</div>
+<div id="cps">CPS:0</div>
 
 <canvas id="game" width="260" height="520"></canvas>
 
@@ -53,89 +52,117 @@ const canvas=document.getElementById("game")
 const ctx=canvas.getContext("2d")
 
 let score=0
-let lava=500
+let lava=520
 
 let clicks=[]
 let cps=0
 
 let bunny={
 x:130,
-y:420,
-size:14
+y:430,
+size:13
 }
-
-let jumping=false
-let jumpT=0
-let startX,startY,targetX,targetY
 
 let platforms=[]
 
-function createPlatform(y){
-let side=Math.random()<0.5?"left":"right"
-let x=side==="left"?45:175
-platforms.push({x:x,y:y,side:side})
+let jumping=false
+let t=0
+let sx,sy,tx,ty
+
+function biomeColor(){
+if(score<50)return "#1a1a1a"
+if(score<100)return "#1f1c1a"
+if(score<150)return "#1b201b"
+return "#1a1d22"
 }
 
-for(let i=0;i<8;i++){
-createPlatform(420-i*70)
+function createPlatform(y){
+
+let side=Math.random()<0.5?"left":"right"
+
+let x=side==="left"?40:180
+
+platforms.push({
+x:x,
+y:y,
+side:side,
+life:1
+})
+
+}
+
+for(let i=0;i<9;i++){
+createPlatform(440-i*70)
 }
 
 function registerClick(){
+
 let now=Date.now()
+
 clicks.push(now)
-clicks=clicks.filter(t=>now-t<1000)
+
+clicks=clicks.filter(a=>now-a<1000)
+
 cps=clicks.length
-document.getElementById("cps").innerText="CPS: "+cps
+
+document.getElementById("cps").innerText="CPS:"+cps
+
 }
 
 function jump(side){
 
-if(jumping) return
+if(jumping)return
 
 registerClick()
 
 let target=platforms[1]
 
 if(target.side!==side){
-bunny.y+=60
+
+bunny.y+=50
 return
+
 }
 
-startX=bunny.x
-startY=bunny.y
+sx=bunny.x
+sy=bunny.y
 
-targetX=target.x+20
-targetY=target.y-10
+tx=target.x+20
+ty=target.y-10
 
-jumpT=0
+t=0
 jumping=true
 
 }
 
 function update(){
 
+canvas.style.background=biomeColor()
+
 lava-=0.05+score*0.002
 
 if(jumping){
 
-jumpT+=0.05
+t+=0.06
 
-let t=jumpT
+bunny.x=sx+(tx-sx)*t
+bunny.y=sy+(ty-sy)*t-Math.sin(t*Math.PI)*60
 
-bunny.x=startX+(targetX-startX)*t
-bunny.y=startY+(targetY-startY)*t-Math.sin(t*Math.PI)*60
+if(t>=1){
 
-if(jumpT>=1){
-
-bunny.x=targetX
-bunny.y=targetY
+bunny.x=tx
+bunny.y=ty
 
 score++
+
 document.getElementById("score").innerText=score
+
+platforms[1].life-=0.2
 
 platforms.shift()
 
 let top=platforms[platforms.length-1]
+
 createPlatform(top.y-70)
 
 jumping=false
@@ -147,6 +174,7 @@ jumping=false
 if(bunny.y<260){
 
 let diff=260-bunny.y
+
 bunny.y=260
 
 platforms.forEach(p=>{
@@ -154,12 +182,15 @@ p.y+=diff
 })
 
 lava+=diff
+
 }
 
-platforms=platforms.filter(p=>p.y<540)
+platforms=platforms.filter(p=>p.y<560)
 
 if(bunny.y>lava){
+
 location.reload()
+
 }
 
 }
@@ -167,6 +198,7 @@ location.reload()
 function drawWalls(){
 
 ctx.fillStyle="#555"
+
 ctx.fillRect(0,0,30,520)
 ctx.fillRect(230,0,30,520)
 
@@ -192,10 +224,12 @@ function drawPlatforms(){
 
 platforms.forEach(p=>{
 
-ctx.fillStyle="#8aff5c"
+ctx.fillStyle="#86ff5f"
+
 ctx.fillRect(p.x,p.y,40,10)
 
-ctx.fillStyle="#5fdc3b"
+ctx.fillStyle="#5bd13a"
+
 ctx.fillRect(p.x,p.y,40,4)
 
 })
@@ -210,18 +244,32 @@ ctx.beginPath()
 ctx.arc(bunny.x,bunny.y,bunny.size,0,Math.PI*2)
 ctx.fill()
 
+ctx.fillStyle="orange"
+
 ctx.fillRect(bunny.x-5,bunny.y-20,4,12)
 ctx.fillRect(bunny.x+1,bunny.y-20,4,12)
+
+ctx.fillStyle="black"
+
+ctx.fillRect(bunny.x-3,bunny.y-2,2,2)
+ctx.fillRect(bunny.x+2,bunny.y-2,2,2)
 
 }
 
 function drawLava(){
 
-ctx.fillStyle="red"
+ctx.fillStyle="#ff3b00"
 ctx.fillRect(0,lava,260,520)
 
-ctx.fillStyle="orange"
-ctx.fillRect(0,lava+10,260,20)
+ctx.fillStyle="#ff7b00"
+
+for(let i=0;i<260;i+=20){
+
+ctx.beginPath()
+ctx.arc(i,lava+5,5,0,Math.PI*2)
+ctx.fill()
+
+}
 
 }
 
@@ -237,27 +285,32 @@ drawLava()
 }
 
 function loop(){
+
 update()
 draw()
+
 requestAnimationFrame(loop)
+
 }
 
 loop()
 
 canvas.addEventListener("click",e=>{
 
-let rect=canvas.getBoundingClientRect()
-let x=e.clientX-rect.left
+let r=canvas.getBoundingClientRect()
 
-if(x<130) jump("left")
+let x=e.clientX-r.left
+
+if(x<130)jump("left")
 else jump("right")
 
 })
 
 document.addEventListener("keydown",e=>{
 
-if(e.key==="ArrowLeft"||e.key==="a") jump("left")
-if(e.key==="ArrowRight"||e.key==="d") jump("right")
+if(e.key==="ArrowLeft"||e.key==="a")jump("left")
+
+if(e.key==="ArrowRight"||e.key==="d")jump("right")
 
 })
 
